@@ -213,7 +213,7 @@ PRAGMA table_info(parts_fts);
 
 -- [insert your SQL statement(s) BELOW this line]
 
-select count(name) as count_overview
+select count(distinct(part_num)) as count_overview
 from parts_fts
 where name match '^mini*';
 
