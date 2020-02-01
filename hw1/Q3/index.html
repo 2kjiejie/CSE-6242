@@ -6,6 +6,9 @@
         <script type="text/javascript" src=".\lib\d3\d3.min.js"></script>
         <script type="text/javascript" src=".\lib\d3-dsv\d3-dsv.min.js"></script>
         <script type="text/javascript" src=".\lib\d3-fetch\d3-fetch.min.js"></script>
+        <style> /* set the CSS */
+        .bar { fill: orange; }
+		</style>
     </head>
     <body>
 		<div id="barplot"></div>
@@ -83,14 +86,21 @@
 		svg.append("g")
 			  .call(d3.axisLeft(y));
 		})
-
-
-
-
-
-
-
 		
+		svg.append("text")
+        .attr("x", width + 5)             
+        .attr("y", 35 + height)
+        .attr("text-anchor", "middle")  
+        .style("font-size", "10px") 
+        .text("jzhou417");
+        
+		svg.append("text")
+		.attr("x", (width / 2))             
+		.attr("y", 0 - (margin.top / 2))
+		.attr("text-anchor", "middle")  
+		.style("font-size", "16px") 
+		.text("Rebrickable Lego Sets by Year");
+				
         </script>
     </body>
 </html>
