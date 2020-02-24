@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Earthquake Statistics for 2011-2015</title>
+ 		<script src="../lib/d3.v5.min.js"></script>
+ 		<script src="../lib/d3-scale-chromatic.v1.min.js"></script>
+ 		<script src="../lib/d3-fetch.min.js"></script>
+ 		<script src="../lib/d3-dsv.min.js"></script>
+ 		<script src="../lib/d3-simple-slider.min.js"></script>
+ 		<script src="../lib/d3-tip.min.js"></script>
+ 		<script src="../lib/topojson.v2.min.js"></script>
+        <style type ="text/css">
+		.rect{
+		}
+		.title{
+			text-align: center;
+			font-size: 18px;
+			text-anchor: middle;			
+		}
+		.overlay{
+		fill: none;
+		pointer-events:all;
+		}
+		.line{
+			fill: none;
+			stroke: #ffab00;
+			stroke-width:2.5; 
+			}
+
+		.dot{
+			fill: none;
+			}
+		
+	</style>
+    </head>
+    <body>
+		<div class= "title">US Earthquakes by Region 2011-2015</div>
+        <script type="text/javascript">
+            // Your beautiful D3 code will go here  
+		/*
+		d3.dsv(",", "q3.csv", function(d) {
+		  return {
+			year: d.Year, // convert "Year" column to Date
+			running_tota: d.running_total
+		  };
+		}).then(function(d) {
+		  console.log(d);
+		});    
+		 */
+		var margin = {top: 120, right: 70, bottom: 70, left: 120},
+			width = 1000 - margin.left - margin.right,
+			height = 600 - margin.top - margin.bottom;
+			
+
+
+		var parseYear = d3.timeParse("%Y");
+
+		d3.dsv(",","./state-year-earthquakes.csv",
+			function(d){
+				return {
+					count: +d.count,
+					region: d.region, 
+					year: parseYear(d.year), 
+					state: d.state, 			
+				};
+			}
+			).then(
+				
+		function (d) {
+			/* 
+			var x = d3.scaleBand()
+			.range([ 0, width ])
+			.domain(d.map(function(d) { return d.year; }))
+			.padding(0.2);
+			*/
+			
+
+			var year1 = d.map(function(d){return parseYear(d.year)});
+			//running_total = d.map(function(d){return +(d.running_total)});
+			var state1 = d.map(function(d){return d.state});
+			var region1 = d.map(function(d){return d.region});
+			var count1 = d.map(function(d){return parseInt(d.count)});
+			//console.log(level1)
+			//console.log(d1);
+			//console.log(count)
+			var xAxis = d3.scaleTime().range([ 0, width ]);
+
+			var yAxis = d3.scaleLinear().range([ height, 0]);
+
+			var nest = d3.nest().key(function(d) {return d.region;}).entries(d);
+
+			var regions = nest.map(function(d) {return d.key;});
+			
+			//console.log(regions);
+			//console.log(level1)
+			//console.log(year)
+
+			
+	/*		  svg.append("g")
+				  .attr("transform", "translate(0," + height + ")")
+				  .call(xAxis);*/
+
+			
+	  		var svg1 = d3.select("body")
+			.append("svg")
+			.attr("width", width + margin.left + margin.right)
+			.attr("height", height + margin.top + margin.bottom)
+			.append("g")
+			.attr("transform",
+				  "translate(" + margin.left + "," + margin.top + ")");
+
+			var svg2 = d3.select("body")
+			.append("svg")
+			.attr("width", width + margin.left + margin.right)
+			.attr("height", height + margin.top + margin.bottom)
+			.append("g")
+			.attr("transform",
+				  "translate(" + margin.left + "," + margin.top + ")");
+
+
+			function Lines(region, number){
+
+				var data1 = nest.find(function (d) {return d.key == region;}).values;
+
+				var year_count = [0,0,0,0,0];	
+
+				var years = ["2011","2012","2013","2014","2015"];
+
+				data1.forEach(function(d)
+				{	
+					var i = 0;
+					while (i < 5)
+						{	
+							//console.log(parseYear(years[i]))
+							if(d.year.getTime() == parseYear(years[i]).getTime())
+							{	
+								//console.log(d.count);
+								//console.log(year_count[i])
+								year_count[i] = parseInt(parseInt(year_count[i]) + parseInt(d.count));
+							}
+							i++;
+						}
+
+				});
+				
+				var new_data = [];
+
+				var each_year = {
+						region: region,
+						count: year_count[0],
+						year: parseYear((2011)),
+						values: data1, 
+					}
+
+				new_data.push(each_year);
+
+				var each_year = {
+						region: region,
+						count: year_count[1],
+						year: parseYear((2012)),
+						values: data1, 
+					}
+
+				new_data.push(each_year);
+
+				var each_year = {
+						region: region,
+						count: year_count[2],
+						year: parseYear((2013)),
+						values: data1, 
+					}
+
+				new_data.push(each_year);
+
+				var each_year = {
+						region: region,
+						count: year_count[3],
+						year: parseYear((2014)),
+						values: data1, 
+					}
+
+				new_data.push(each_year);
+
+				var each_year = {
+						region: region,
+						count: year_count[4],
+						year: parseYear((2015)),
+						values: data1, 
+					}
+
+				new_data.push(each_year);
+
+				//console.log(parseYear("2015"))
+				console.log(new_data)
+
+
+				yAxis.domain([0, 3000]);
+				xAxis.domain([d3.min(new_data, function(d) { return d.year}), d3.max(new_data, function(d) { return d.year})]);
+				
+				var draw_line = d3.line()
+				.x(function (d) {return xAxis(d.year);})
+				.y(function (d) {return yAxis(d.count);})
+
+				var colors = ["red", "orange", "blue", "green"]
+
+				svg1.append("path")
+				.attr("class","line")
+				.data(new_data)
+				.attr("d", draw_line(new_data))
+				.style("stroke",colors[number]);
+
+
+				//console.log(d);
+
+				//console.log(new_data);
+
+				//console.log(year_count);
+				/*
+				if (number = 3)
+				{
+					svg1.append("g")
+					.attr("transform", "translate(0," + height +")")
+					.call(d3.axisBottom(xAxis));
+
+					svg1.append("g")
+					.call(d3.axisLeft(yAxis));
+				}
+				*/
+				svg1.selectAll("line_circle")
+				.data(new_data)
+				.enter()
+				.append("circle")
+				.attr("class","data-circle")
+				.attr('cy', d => yAxis(d.count))
+				.attr("r", 6)
+				.attr("cx", d => xAxis(d.year))				
+				.style("fill", colors[number])
+				.on("mouseover", function(d){
+
+
+				d3.select(this).attr("r",12);
+
+				var count_bar = d.values
+				// console.log(d.values);
+				
+
+				var findstate = d3.nest()
+				.key(function(d){return d.state;})
+				.entries(count_bar);
+
+				var bar_data =[];
+				findstate.map(function(d) { return d.key}).forEach(function(d)
+				{
+
+				  var inted={};
+
+				  inted.state = d;
+				  inted.count=0; 
+
+				  bar_data.push(inted);
+
+				});
+
+				console.log(bar_data);
+				var total_year = d.year;
+
+				count_bar.forEach(
+				function(data)
+				{
+				    bar_data.forEach(function(d)
+				     {   
+				     	if
+				     		(data.year.getTime() == total_year.getTime() && d.state==data.state)
+				     	{
+				     		d.count = d.count + data.count;
+				     	}
+				     });
+				}); 
+
+				console.log(bar_data);
+
+
+
+
+				bar_data = bar_data.sort(function(x,y){
+
+				if(x.count == y.count)
+				{
+					return d3.descending(x.state,y.state);
+				}
+
+				else
+				{
+					return d3.descending(x.count,y.count);
+				}
+				});
+
+				svg2.append("text")
+				.attr("class", "in title")
+				.text( d.region+ "ern Region Earthquakes "+total_year.getFullYear())
+				.attr("x", width/2)
+				.attr("y",-5)
+				;
+
+				//this is the state
+				var state_bar = d3.set(bar_data.map(function(item) {
+					return item.state;
+				})).values();
+
+				var YAxis = d3.scaleBand()
+				.range([ 0, height])
+				.domain(state_bar);
+
+				yearscale = [d3.min(bar_data, function(d) { return d.count}),  d3.max(bar_data, function(d) { return d.count})]
+
+				var XAxis = d3.scaleLinear()
+				.range([0,width])
+				.domain(yearscale);
+
+
+				svg2.append("g")
+				.attr("class", "in xaxis")
+				.attr("transform", "translate(0," +height + ")")
+				.call(d3.axisBottom(XAxis));
+
+				svg2.append("g")
+				.attr("class","in yaxis")
+				.call(d3.axisLeft(YAxis));
+
+				function gridscale() {		
+				    return d3.axisBottom(XAxis).ticks(9);				        
+				}
+
+				svg2.append("g")			
+				      .attr("class", "in grid")
+				      .call( gridscale()
+				          .tickSize(height)
+				          .tickFormat("")
+				      )
+
+
+
+				//console.log(bar_data.count)
+
+				var drawbar = svg2.selectAll(".in rect")
+				.data(bar_data)
+				.enter()
+				.append("rect")
+				.attr("class","in rect")
+				.attr("fill", "red")
+				.attr("y", function(d) {return YAxis(d.state)})
+				.attr("height", 0.94*(height/bar_data.length))
+				.attr("width", function(d) {return XAxis(d.count)} )
+				;
+				})
+
+				
+
+				.on("mouseout", function() { 
+				//shape the circle back
+				d3.select(this).attr("r",5);
+
+				d3.selectAll(".in").remove()
+				;});
+
+				if(number==3)
+				{ svg1.append("g")
+				.attr("class", "x axis")
+				.attr("transform", "translate(0," +height + ")")
+				.call(d3.axisBottom(xAxis).tickFormat(d3.timeFormat("%Y")).ticks(d3.timeYear));
+
+				svg1.append("g")
+				.attr("class","y axis")
+				.call(d3.axisLeft(yAxis));
+
+				//legend part
+				svg1.append("text")
+		        .attr("x", width/2)
+		        .attr("y", 0)
+		        .attr("text-anchor", "middle")
+		        .text("jzhou417")
+		        .style("font-size", 16)
+		        .style("font-weight", "bold");
+
+				var legend_dict = [{region: "Midwest", color: "green"},{region: "Northeast",color:"blue"},{region: "South", color: "red"},{region: "West", color: "orange"}];
+
+				var legend = svg1.selectAll("circle_legend")
+				.data(legend_dict)
+				.enter()
+				.append("g")
+				.attr("transform" , function(d,number){return "translate(" +width *0.85 +"," +(number*18) +")";})
+				.attr("class", "legend")
+				;
+
+				legend.append("text").text(function(d) {return d.region})
+				.attr("transform", "translate(25,4)");
+
+				legend.append("circle")
+				.attr("fill", function(d) {return d.color})
+				.attr("r",6);
+				}
+
+				} //end of Lines function
+
+				Lines(regions[0],0);
+				Lines(regions[1],1);
+				Lines(regions[2],2);
+				Lines(regions[3],3);
+
+			}); //end of data function
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+			
+
+			/*
+
+			var line4 = d3.line()
+			.x(function(d){return xAxis(parseYear(d.year));})
+			.y(function(d){return yAxis(+(d["8.0+"]));})
+			//.curve(d3.curveMonotoneX);
+
+			var line3 = d3.line()
+			.x(function(d){return xAxis(parseYear(d.year));})
+			.y(function(d){return yAxis(+(d["7_7.9"]));})
+			//.curve(d3.curveMonotoneX);
+
+			var line2 = d3.line()
+			.x(function(d){return xAxis(parseYear(d.year));})
+			.y(function(d){return yAxis(+(d['6_6.9']));})
+			//.curve(d3.curveMonotoneX);
+
+			var line1 = d3.line()
+			.x(function(d){return xAxis(parseYear(d.year));})
+			.y(function(d){return yAxis(+(d['5_5.9']));})
+			//.curve(d3.curveMonotoneX);
+
+
+			
+
+			
+
+			//add y axis
+
+			
+
+			//console.log(line4(d))
+			//console.log(d);
+			svg1.append("path")
+				.d(d)
+				.attr("class","line")
+				.attr("d", line4(d))
+				.style("stroke","#900C3F");
+
+			svg1.append("path")
+				.d(d)
+				.attr("class","line")
+				.attr("d", line3(d))
+				.style("stroke","#C70039");
+
+			svg1.append("path")
+				.attr("class","line")
+				.d(d)
+				.attr("d", line2(d))
+				.style("stroke","#FF5733");
+
+			svg1.append("path")
+				.attr("class","line")
+				.d(d)
+				.attr("d", line1(d))
+				.style("stroke","FFC300");
+
+			//console.log(xAxis(level2))
+			//
+			var linelegend= svg1.selectAll("rect").d(legend_dict)
+								.enter()
+								.append("g")
+								.attr("class","lineLegend")
+								.attr("transform", function(d,i){return "translate(" +width*0.8 +"," + (i*17) +")";});
+
+			linelegend.append("text").text(function (d) {return d.name;})
+			    .attr("transform", "translate(25,9)"); 
+
+			linelegend.append("rect")
+			    .attr("fill", function(d){return d.color;} )
+			    .attr("width", 20).attr("height", 10);
+
+			// add x axis
+			
+
+
+			//add label
+
+			svg1.append("text")
+			.attr("transform", "translate("+ (width/2)+"," + (height + 35) +")")
+			.style("text-anchor", "middle")
+			.text("Year");
+
+
+			svg1.append("text")
+			.attr("transform", "rotate(-90)")
+			.attr("y", 20 - margin.left)
+			.attr("x", 0 - (height/2))
+			.attr("dy", "1em")
+			.style("text-anchor", "middle")
+			.text("Num of Earthquakes");
+
+				svg1.append("text")
+        .attr("x", width + 5)             
+        .attr("y", 35 + height)
+        .attr("text-anchor", "middle")  
+        .style("font-size", "10px") 
+        .text("jzhou417");
+        
+		svg1.append("text")
+		.attr("x", (width / 2))             
+		.attr("y", 0 - (margin.top / 2))
+		.attr("text-anchor", "middle")  
+		.style("font-size", "16px") 
+		.text("Earthquake Statistics for 2000-2015");
+		*/
+		
+
+		</script>
+    </body>
+</html>

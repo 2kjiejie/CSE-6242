@@ -1,0 +1,1 @@
+When we find datas are far away from each other, we'd better use nonlinear scale to make sure they are in a relatively acceptable scale, which can make it easier to have a better recognition for the dataset.

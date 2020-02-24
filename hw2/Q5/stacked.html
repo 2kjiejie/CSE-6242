@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <script src="../lib/d3.v5.min.js"></script>
+        <script src="../lib/d3-dsv.min.js"></script>
+    	<script src="../lib/d3-fetch.min.js"></script>
+    	<script src="../lib/d3-scale-chromatic.v1.min.js"></script>
+        <title>Visualizing Earthquakes Counts by States</title>
+        <style> /* set the CSS */
+        .bar { fill: blue; }
+		</style>
+    </head>
+
+    <select id="select">
+    	<option value="2017">2017</option>
+    	<option value="2018">2018</option>
+	</select>
+
+    <body>
+		<div id="stack"></div>
+        <script type="text/javascript">
+            // Your beautiful D3 code will go here  
+		/*
+		d3.dsv(",", "q3.csv", function(d) {
+		  return {
+			year: d.Year, // convert "Year" column to Date
+			running_tota: d.running_total
+		  };
+		}).then(function(data) {
+		  console.log(data);
+		});    
+		 */
+    var svg = d3.select("#stack").append("svg")
+
+    var margin = {top: 120, right: 30, bottom: 70, left: 100},
+    width = 1000 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom;
+
+    var x_1 = d3.scaleBand().range([0, width]);
+
+    var x_2 = d3.scaleBand();
+
+    var y = d3.scaleLinear().range([height, 0]);
+
+    var legend_dict = [{name: "7.0+", color: "#b33040"},{name: "6_6.9", color :"#d25c4d"},{name: "5_5.9", color:"#f2b447"}];
+
+    var start_y;
+
+    x_1 = x_1.padding(0.2);
+
+    svg = svg
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+        function Drawstack(data) {
+        
+        svg.selectAll("*").remove();
+
+        var data1 = d3.nest().key(function (data) {
+                return data.Year;
+            }).entries(data)
+
+        var new_years = [];
+        
+        console.log(cols);
+
+        svg.append("g").append("text")
+            .attr("y", -35)
+            .attr("x", -300)
+            .attr("transform", "rotate(-90)")
+            .style("font-size", "15px")
+            .text("Number of Earthquakes");
+
+        svg.append("g").append("text")
+                    .attr("transform", "translate(400,450)")
+                    .text("State")
+                    .style("font-size", "15px");
+        var n = 0;
+
+        while (n < data1.length) 
+        {   
+            var k = 0;
+            if (String(d3.values(data1)[n].key) === current_year) 
+            {   
+                console.log(String(d3.values(data1)[n].key));
+                while (k < data1[n].values.length) 
+                {
+                    new_years.push({            
+                        "5_5.9": data1[n].values[k]["5_5.9"],
+                        "6_6.9": data1[n].values[k]["6_6.9"],
+                        State: data1[n].values[k].State,
+                        "7.0+": data1[n].values[k]["7.0+"],    
+                    })
+                    k++;
+                }
+            }
+            n++;
+        }
+
+        //console.log(new_years)
+
+        var cols = data.columns.slice(2);
+
+        if (current_year = "2017")
+        {
+            svg.append("g").append("text")
+            .attr("y", -35)
+            .attr("x", -300)
+            .attr("transform", "rotate(-90)")
+            .style("font-size", "15px")
+            .text("Number of Earthquakes");
+
+            svg.append("g").append("text")
+                        .attr("transform", "translate(400,450)")
+                        .text("State")
+                        .style("font-size", "15px");
+        }
+
+        new_years.forEach(function (d) {
+            var col_y = [];
+
+            d.columns = cols.map(function (col) {
+                
+                col1 = col_y[d.State];
+
+                if (col == cols[0]) {
+                    col_y[d.State] = 0;
+                }
+                start_y = col_y[d.State];
+                col_y[d.State] += +(d[col]);
+                return {
+                    end_y: +d[col] + start_y,
+                    state: d.State, 
+                    column: col, 
+                    start_y: start_y};
+            })
+            x_1.domain(new_years.map(function (d) {return d.State;}));
+            d.total = d3.max(d.columns, function (d) {return d.end_y;})
+            y.domain([0, d3.max(new_years, function (d) {return d.total;})]);
+            x_2.domain(d3.keys(function (d) {console.log(d.name);return d.name;})).range([0, x_1.bandwidth()]);
+        })
+
+        var xscale = d3.axisBottom().scale(x_1);
+
+        svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xscale);        
+
+        svg.append("g")
+            .attr("class", "y axis")
+            .call(d3.axisLeft().scale(y))
+
+        var stack = svg.selectAll(".project_stackedbar")
+            .data(new_years)
+            .enter().append("g")
+            .attr("class", "g")
+            .attr("transform", function (d) {
+                return "translate(" + x_1(d.State) + ",0)";
+            });
+
+        svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 5)
+            .attr("dy", ".8em")
+            .style("text-anchor", "end");
+
+        var color = d3.scaleOrdinal().range(["#b33040", "#d25c4d", "#f2b447"]);
+
+        stack.selectAll("rect")
+            .data(function (d) {
+                return d.columns;
+            })
+            .enter().append("rect")
+            .style("fill", function(d) {
+                return color(d.column);
+            });
+
+        var legend_dict = [{name: "7.0+", color: "#b33040"},{name: "6_6.9", color :"#d25c4d"},{name: "5_5.9", color:"#f2b447"}];
+
+        var linelegend = svg.selectAll(".legend").data(legend_dict)
+                                .enter()
+                                .append("g")
+                                .attr("class","legend")
+                                .attr("transform", function(d,i){return "translate("+width  +"," + (i*25) +")";});
+
+        linelegend.append("text").text(function (d) {console.log(d.name);return d.name;})
+            .attr("transform", "translate(-15,9)"); 
+
+        linelegend.append("rect")
+            .attr("fill", function(d){console.log(d.color);return d.color;} )
+            //.attr("x", width + 10)
+            //.attr("width", 20).attr("height", 20)
+            .attr("transform", "translate(-30,-3)")
+            .attr("width", 15).attr("height", 15);
+
+
+        var text = svg.selectAll(".text")
+            .data(new_years)
+                text.enter().append("text")
+            .attr("class", "text")
+            .attr("text-anchor", "middle")
+            .merge(text)
+            .text(function (d) {
+                return d.total;
+            })
+            .attr("x", function (d){return  x_1(d.State) + x_1.bandwidth() / 2})
+            .attr("y", function (d){return y(d.total) - 5})
+            ;
+        
+        stack.selectAll("rect")
+            .attr("width", x_2.bandwidth())
+            .attr("y", function (d) {
+               console.log(y(d.end_y))
+                return y(+d.end_y);
+            })
+            .attr("x", function (d) {
+                return x_2(d.column);
+            })
+            .attr("height", function (d) {
+                return y(+d.start_y) - y(+d.end_y);
+            });
+
+        svg.append("text")
+        .attr("x", width + 5)             
+        .attr("y", 35 + height)
+        .attr("text-anchor", "middle")  
+        .style("font-size", "10px") 
+        .text("jzhou417");
+        
+        svg.append("text")
+        .attr("x", (width / 2))             
+        .attr("y", 0 - (margin.top / 2))
+        .attr("text-anchor", "middle")  
+        .style("font-size", "20px") 
+        .text("Visualizing Earthquakes Counts by States");
+    }
+
+    current_year = "2017";
+
+    d3.csv("../Q5/earthquake.csv").then(function (data) {
+
+        Year = data.map(function(d){return +d.Year});
+
+        level2 = data.map(function(d){return +d['6_6.9']});
+
+        level1 = data.map(function(d){return +d['7.0+']});
+
+        level3 = data.map(function(d){return +d['5_5.9']});
+
+        State = data.State
+
+        d3.select("body")
+            .on("change", function change() {
+                var temp_title = document.getElementById("select");
+                current_year = temp_title.options[temp_title.selectedIndex].value;
+                console.log(current_year);
+                Drawstack(data);
+            })
+        Drawstack(data);
+    });
+
+    
+
+
+		
+		
+				
+        </script>
+    </body>
+</html>

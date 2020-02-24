@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <script src="../lib/d3.v5.min.js"></script>
+        <script src="../lib/d3-dsv.min.js"></script>
+    	<script src="../lib/d3-fetch.min.js"></script>
+        <script src="../lib/d3-scale-chromatic.v1.min.js"></script>
+        <script src="../lib/topojson.v2.min.js"></script>
+        <script src="../lib/d3-simple-slider.min.js"></script>
+        <script src="../lib/d3-tip.min.js"></script>
+        <title>Visualizing Earthquakes Counts by States</title>
+        <style> /* set the CSS */
+        .bar { fill: blue; }
+        .nation {
+        	fill: none;
+            stroke: #000000;
+            stroke-linejoin: round;
+            stroke-width: 0.5;
+            }
+
+            .states{
+            fill:none;
+            stroke: #000000;
+            stroke-linejoin: round;
+            }
+
+            .contour:hover{
+            stroke: #ffffff;
+            stroke-width: 5;
+            stroke-linejoin: round;
+            }
+
+            .d3-tip {
+            font-size: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 8px;
+            border-radimap: 5px;
+            }
+		</style>
+    </head>
+    <body>
+  		<div class="row align-items-center">
+    	<div class="col-sm-2"><p id="value-time"></p></div>
+    	<div class="col-sm"><div id="slider-time"></div></div>
+  		</div>
+		<div id="stack"></div>
+        <script type="text/javascript">
+    var margin = {top: 120, right: 100, bottom: 70, left: 100},
+    width = 1200,
+    height = 600;
+
+    var geop = d3.geoAlbersUsa().scale(1000).translate([450, 300]);
+
+    var path = d3.geoPath().projection(geop);
+        	
+    var svg = d3.select("#stack").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+    var dataTime = d3.range(0, 6).map(function(d) {
+    return new Date(2010 + d, 6, 1);
+  });
+
+  var sliderTime = d3
+    .sliderBottom()
+    .min(d3.min(dataTime))
+    .max(d3.max(dataTime))
+    .step(1000 * 60 * 60 * 24 * 365)
+    .width(300)
+    .tickFormat(d3.timeFormat('%Y'))
+    .tickValues(dataTime)
+    .default(new Date(2010, 5, 1))
+    .on('onchange', val => {
+      d3.select('p#value-time').text(d3.timeFormat('%Y')(val));
+    });
+
+  var gTime = d3
+    .select('div#slider-time')
+    .append('svg')
+    .attr('width', 500)
+    .attr('height', 100)
+    .append('g')
+    .attr('transform', 'translate(30,30)');
+
+  gTime.call(sliderTime);
+
+  d3.select('p#value-time').text(d3.timeFormat('%Y')(sliderTime.value()));
+
+  var promises = [
+                d3.json("states-10m.json"),
+                d3.dsv(",","state-earthquakes.csv")
+            ]
+
+  Promise.all(promises).then(setup);
+
+  current_year = "2010"
+
+  function setup([map,data]){
+  draw(map,data,current_year);
+  sliderTime.on("onchange", function () {
+    	var current_year = d3.timeFormat('%Y')(sliderTime.value()).toString();
+    	console.log(current_year);
+
+    	draw(map,data,current_year);
+		})
+  }
+
+  function draw(map,data,current_year) {
+
+                console.log(map)
+                console.log(data)
+                count_eq = d3.map();
+                region = d3.map();
+                console.log(region)
+                var i = 0; 
+                while (i < data.length )
+                {
+                    count_eq.set(data[i].States, + data[i][current_year]);
+                    region.set(data[i].States,data[i].Region);
+                    i++;
+                }
+                //console.log(region)
+                //console.log(topojson.feature(map, map.objects.states))
+                console.log(d3.max(count_eq.values()))
+
+                var max_num = d3.max(count_eq.values());
+                var min_num = d3.min(count_eq.values());
+
+                var logScale = d3.scaleLog().domain([1, max_num]);
+
+                var tryixia = d3.scaleLog().
+                domain(1,d3.max(count_eq.values()));
+
+                var color1 = d3.scaleThreshold()
+                .domain([1,5,10,50,100,500,1000,1500,2000])
+                .range(d3.schemeOrRd[9]);
+
+                const interval = 1/9;
+
+                var log_result = [
+               Math.round(logScale.invert(0.5/9)).toString(),
+			   Math.round(logScale.invert(1.5/9)).toString(),
+			   Math.round(logScale.invert(2.5/9)).toString(),
+			   Math.round(logScale.invert(3.5/9)).toString(),
+			   Math.round(logScale.invert(4.5/9)).toString(),
+			   Math.round(logScale.invert(5.5/9)).toString(),
+			   Math.round(logScale.invert(6.5/9)).toString(),
+			   Math.round(logScale.invert(7.5/9)).toString(),
+			   Math.round(logScale.invert(8.5/9)).toString()
+			   ];
+
+                console.log(tryixia)
+                console.log(log_result)
+
+                var color = d3.scaleThreshold()
+                .domain(log_result)
+                .range(d3.schemeOrRd[9]);
+
+      			//console.log(legend_keys)
+
+                // d3.tip
+                var tip = d3.tip()
+                .attr("class","d3-tip")
+                .direction("n")
+                .html(function(d){return "State:"+d.properties.name
+                	+"<br/>Region:"+ region.get(d.properties.name)
+                	+"<br/>Year:"+ current_year
+                	+"<br/>Earthquakes:"+count_eq.get(d.properties.name)});
+                svg.call(tip);
+
+                svg.append("text")
+                .attr("class","legend_title")
+                .attr("x", width-2*margin.right)             
+                .attr("y", 5 + margin.top)
+                .attr("text-anchor", "middle")  
+                .style("font-size", "20px") 
+                .text("Earthquake Frequency");
+
+                svg.selectAll(".legendRect")
+                .data([1,5,10,50,100,500,1000,1500,2000])
+                .enter()
+                .append("rect")
+                .attr("class", "legendRect")
+                .attr("x", width-2*margin.right)
+                .attr('y', function(d,i) { return 5 + margin.top + 20 + i*(15+10)})
+                .attr("height", 15)
+                .attr("width", 15)
+                .style("fill", function(d,i) {return color1(d);})
+
+                console.log(log_result)
+
+                d3.selectAll(".legendText").remove();
+
+                svg.selectAll(".legendText")
+                .data(log_result)
+                .enter()
+                .append("text")
+                .attr("class", "legendText")
+                .attr("text-anchor","left")
+                .attr("x", width-2*margin.right + 1.2*15)
+                .attr("y", function(d,i){ return 5 + margin.top + 35 + i*25})
+                .style("font-size", "16px")   
+                .text(function(d,i) {return d.toString(10)})
+
+                // draw map
+                svg.append("g")
+                .attr("class", "conties")
+                .selectAll("path")
+                .data(topojson.feature(map, map.objects.states).features)
+                .enter().append("path")
+                .attr("class","contour")
+                .attr("fill", function(d) { return color(count_eq.get(d.properties.name));})
+                .attr("d", path)
+                .on("mouseover",tip.show)
+                .on("mouseout",tip.hide)
+
+                svg.append("path")
+                .datum(topojson.mesh(map, map.objects.states)) // mesh both inferior and outer boundry
+                .attr("class", "states")
+                .attr("d", path);
+                //--------------------legend
+
+                svg.append("text")
+		        .attr("x", width)             
+		        .attr("y", height)
+		        .attr("text-anchor", "middle")  
+		        .style("font-size", "10px") 
+		        .text("jzhou417");
+            }
+
+
+       	</script>
+    </body>
+</html>
