@@ -1,0 +1,5 @@
+1.Single decision tree is very easy to overfit. Random forest applies many different decision trees and votes for the final classification, which means it is very robust in handling large dataset.
+
+2. Execute time: 268s
+
+3. Accuracy: 72.96%
